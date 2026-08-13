@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<title>Cäsar-Verschlüsselung</title>
+<style>
+	html {
+		font-family: 'Courier';
+		align-items: center;
+		background-color: #000;
+		display: flex;
+		justify-content: center;
+		height: 100%;
+		width: 100%;
+		margin: 0;
+		color: white;
+	}
+	h1 {
+		font-size: 20px;
+		line-height: 20px;
+		padding: 0;
+		margin: 0;
+	}
+</style>
+
+<body>
+
+<canvas id="htmlCanvas" width="900" height="830" style="border: 2px solid black;"></canvas>
+
+</body>
+
+<script>
+
+const canvas = document.getElementById("htmlCanvas");
+const ctx = canvas.getContext("2d");
+
+let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+
+let offset = 16;
+
+let input_text  = "VENI, VIDI, VICI";
+let output_text = c_cypher(input_text, offset);
+let show_output = true;
+
+let mX = 0; // mouse position
+let mY = 0;
+let mClick = false;
+
+let decoration_text = "IWT QOSOGF PLCURE UE LHPDZXP";
+
+ctx.font = "40px Courier";
+
+
+// input text area
+const pad = 32;
+ctx.beginPath();
+ctx.moveTo(pad, pad);
+ctx.lineTo(canvas.width-pad, pad);
+ctx.lineTo(canvas.width-pad, pad+250);
+// arrow
+ctx.lineTo(770, 280);
+ctx.lineTo(770, 420);
+ctx.lineTo(800, 420);
+ctx.lineTo(730, 480);
+ctx.lineTo(660, 420);
+ctx.lineTo(690, 420);
+ctx.lineTo(690, 280);
+// end of arrow
+ctx.lineTo(pad, pad+250);
+ctx.lineTo(pad, pad);
+ctx.lineTo(pad, pad);
+
+const grad=ctx.createLinearGradient(0, 280, 0, 450); 
+grad.addColorStop(0.18, "lightblue");
+grad.addColorStop(0.19, "aliceblue");
+grad.addColorStop(0.70, "aliceblue");
+grad.addColorStop(0.71, "lightblue");
+
+let animating = false;
+let anim_speed_mult = 1;
+let letter_to_animate = 0;
+let letter_pos_x = []; // position x
+let letter_pos_y = []; // position y
+let letter_pos_goal_x = [];
+let letter_pos_goal_y = [];
+let current_letter_has_converted = false;
+
+function draw() {
+
+	// (interactions blocked while animating)
+	if (animating) { mClick = false; }
+
+	canvas.style.cursor = "auto"; 
+
+	let cellsize = (canvas.width*0.93) / 26;
+
+	// background
+	ctx.fillStyle = "lightblue";
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+	ctx.fillStyle = "aliceblue";
+	ctx.fillRect(10, 10, canvas.width-20, canvas.height-20);
+
+	// text area with arrow
+	ctx.strokeStyle = grad; 
+	ctx.lineWidth = 9;
+	ctx.stroke();
+
+	// input text area
+	if (!animating) {
+		if (textarea(pad, pad, canvas.width - pad*2, 250, input_text)) {
+			let ret = window.prompt("Text:", input_text)
+			if (ret != null) {
+				input_text = ret.toUpperCase();
+				input_text = input_text.replace("Ä", "AE")
+				input_text = input_text.replace("Ü", "UE")
+				input_text = input_text.replace("Ö", "OE")
+				input_text = input_text.replace("ß", "SS")
+		
+				if (input_text.length > 198) {
+					input_text = input_text.substring(0, 198);
+				}
+				
+				output_text = c_cypher(input_text, offset);
+			}
+		}
+	}
+
+
+	// Letter cards
+	for (let i=0; i<26; i++) {
+
+		// Green cards 
+		ctx.fillStyle = `rgb(
+				${ 20  + i * 7 }, 
+				${ 200 + i     }, 
+				${ 20  + i * 2 })`;
+		ctx.fillRect(i*cellsize+32, 320, 
+				cellsize-2, cellsize-1);
+
+		ctx.fillStyle = "darkblue";
+		ctx.fillText(alphabet[i], 
+			cellsize*i + 2 + 32, 283 + cellsize*2 );
+
+		// Red cards 
+		ctx.fillStyle = `rgb(
+				${ 220 }, 
+				${ 40 + (i+offset)%26 * 7 }, 
+				${ 40 + (i+offset)%26 * 2 })`;
+
+		ctx.fillRect(i*cellsize+32, 320 + cellsize +5, 
+				cellsize-2, cellsize);
+	
+		ctx.fillStyle = "darkblue";
+		let letterIndex = (offset + i)%26;
+		ctx.fillText(alphabet[letterIndex], 
+			cellsize*i + 2 + 32, 321 + cellsize*2 );
+
+	}
+
+
+
+
+	// show output
+	ctx.fillStyle = "lightblue";
+	ctx.fillRect(pad, 500, canvas.width-pad*2, 250)
+	ctx.fillStyle = "darkblue";
+	
+	if (show_output) {
+		if (button("◉", 85, 455)) { show_output = false; }
+		for (i=0; i<input_text.length; i++) {
+			ctx.fillText(output_text[i], charpos_by_index(i)[0], charpos_by_index(i)[1]+470)
+		}
+
+	
+	} else {
+		if (!animating) {
+			if (button("◡", 85, 455)) { show_output = true; } 
+			ctx.fillText("...", 410, 630)
+		}
+	}
+	       
+		
+	if (!animating) {
+		// setting the cypher key
+		if (button("◀", 360, 455)) { 
+			offset++;
+			if (offset > 25) { offset = 0; }
+			output_text = c_cypher(input_text, offset);
+		}
+		if (button("▶", 460, 455)) {
+			offset--;
+			if (offset < 0) { offset = 25; } 
+			output_text = c_cypher(input_text, offset);
+		}
+
+		let offset_text = (26-offset).toString()
+		if (offset_text == "26") { offset_text = "00" }
+		if (offset_text.length == 1) { offset_text = "0" + offset_text }
+		ctx.fillText(offset_text, 400, 455)
+
+		// switch key
+		if (button("↕", 150, 455)) {
+			input_text = output_text
+			output_text = c_cypher(input_text, offset);
+		}
+		
+	}
+
+	// animate
+	if (!animating) {
+		if (button("⎌", 210, 455)) {
+			// animation startup
+			animating = true;
+			output_text = input_text;
+			show_output = false;
+			letter_to_animate = 0;
+			current_letter_has_converted = false;
+	
+			for (i=0; i<input_text.length; i++) {
+	
+				letter_pos_x.push(charpos_by_index(i)[0]);	
+				letter_pos_y.push(charpos_by_index(i)[1]);
+				letter_pos_goal_x.push(letter_pos_x[i])
+				letter_pos_goal_y.push(letter_pos_y[i]+470)		
+			}
+		}
+
+	} else {
+		// actual animation logic
+		
+		// drawing a lighter copy of the letters that have already been animated
+		ctx.fillStyle = "lightblue"
+		for (i=0; i<=letter_to_animate; i++) {
+			ctx.fillText(input_text[i], charpos_by_index(i)[0], charpos_by_index(i)[1])
+		}
+
+		// drawing the animated letters at their individual positions
+		
+		for (i=0; i<output_text.length; i++) {
+			if (i==letter_to_animate) { ctx.fillStyle = "red"
+			} else { ctx.fillStyle = "darkblue" }
+			ctx.fillText(output_text[i], 
+				letter_pos_x[i], letter_pos_y[i])
+		}
+		
+
+
+		// if the current letter is a special character, just skip the first animation step.
+		if (!alphabet.includes(output_text[letter_to_animate])) { current_letter_has_converted = true }
+
+
+		if (!current_letter_has_converted) {
+
+			let letter_row_y = 350
+			let letter_index = alphabet.indexOf( output_text[letter_to_animate] )
+			let letterpos_x  = cellsize*letter_index + 2 + 32 // (same math as for placing the letter cards)
+
+			// rubberbanding to the letter row
+			letter_pos_y[letter_to_animate] = 
+				letter_pos_y[letter_to_animate] +
+				( letter_row_y - letter_pos_y[letter_to_animate] )*0.1*anim_speed_mult; 
+			letter_pos_x[letter_to_animate] = 
+				letter_pos_x[letter_to_animate] +
+				( letterpos_x - letter_pos_x[letter_to_animate] )*0.2*anim_speed_mult; 
+
+
+
+			// skipping spaces, snapping into position and converting to the new meaning
+			if (input_text[letter_to_animate] == ' ' || 
+				letter_pos_y[letter_to_animate] > letter_row_y - 2) {
+
+
+				// replacing the letter with its encrypted form
+				output_text = setCharAt(output_text, letter_to_animate, c_cypher(output_text, offset)[letter_to_animate])
+				current_letter_has_converted = true
+		
+				// snapping into place
+				letter_pos_y[letter_to_animate] += cellsize+5 //(gap between the cards) 
+				
+			}
+			
+
+
+		} else {
+		// letter has been converted, now just move to the final position
+		
+			// rubberbanding the letter end position	
+			letter_pos_y[letter_to_animate] = 
+				letter_pos_y[letter_to_animate] +
+				( letter_pos_goal_y[letter_to_animate] - letter_pos_y[letter_to_animate] )*0.1*anim_speed_mult; 
+			letter_pos_x[letter_to_animate] = 
+				letter_pos_x[letter_to_animate] +
+				( letter_pos_goal_x[letter_to_animate] - letter_pos_x[letter_to_animate] )*0.2*anim_speed_mult; 
+	
+	
+			// skipping spaces, and snapping into place once we are close 
+			if (input_text[letter_to_animate] == ' ' || 
+				letter_pos_y[letter_to_animate] > letter_pos_goal_y[letter_to_animate]-10) {
+
+				// snapping into place
+				letter_pos_x[letter_to_animate] = letter_pos_goal_x[letter_to_animate]
+				letter_pos_y[letter_to_animate] = letter_pos_goal_y[letter_to_animate]
+				// animate the next letter
+				letter_to_animate++
+				current_letter_has_converted = false
+				anim_speed_mult *= 1.1
+				if (anim_speed_mult > 3) { anim_speed_mult = 3 }
+				if (letter_to_animate >= 33) { anim_speed_mult = 5 }
+			}
+
+		}
+		
+		if (letter_to_animate >= input_text.length) {
+			// animation end
+			anim_speed_mult = 1
+			animating = false
+			show_output = true
+			letter_pos_x = []
+			letter_pos_y = []
+			letter_pos_goal_x = []
+			letter_pos_goal_y = []
+		}
+
+	}
+
+	// cypher decoration at the bottom
+	ctx.fillStyle = "lightblue";
+	ctx.fillText( c_cypher(decoration_text, (offset+19)%26), 
+		110, 798)
+
+	// resetting 
+	mClick = false;
+
+setTimeout("draw()", 50);
+}
+draw();
+
+
+
+function setCharAt(str,index,chr) {
+	// replace a single character of a string
+	if(index > str.length-1) return str;
+	return str.substring(0,index) + chr + str.substring(index+1);
+}
+
+
+
+
+canvas.addEventListener("click", handle_click);
+function handle_click() {
+	mClick = true;
+}
+
+canvas.addEventListener('mousemove', function(evt) {
+	var rect = canvas.getBoundingClientRect();
+	mX = evt.clientX - rect.left,
+	mY = evt.clientY - rect.top
+}, false);
+
+function charpos_by_index(i) {
+	let chars_per_line = 33
+	return [
+		53 + (i%chars_per_line)*24, 
+		80 + 34*Math.floor(i/chars_per_line) 
+		]
+
+}
+
+function textarea(x, y, w, h, text) {
+
+	ctx.fillStyle = "darkblue";
+
+	for (i=0; i<input_text.length; i++) {
+		ctx.fillText(input_text[i], charpos_by_index(i)[0], charpos_by_index(i)[1])
+	}
+
+	// return whether the cursor is on this area	
+	if (mX > x && 
+		mX < x+w &&
+		mY > y &&
+		mY < y+h) { 
+			canvas.style.cursor = "pointer"; 
+			return mClick;
+			}
+	return false
+}
+
+function button(icon, x, y) {
+
+	ctx.fillStyle = "darkblue";
+	ctx.fillText(icon, x, y)
+
+	let distance  = Math.sqrt(
+		Math.pow(mX-(x+15), 2)
+		+ Math.pow(mY-(y-5), 2)
+		, 2);
+
+	if (distance < 30) {
+		canvas.style.cursor = "pointer"; 
+		return mClick;
+	} 
+	return false
+}
+
+function c_cypher(inp, offset) {
+	let out = ""
+
+	for (i=0; i<inp.length; i++) {
+
+		let cp = inp[i].toUpperCase().codePointAt(0)
+		
+		if (cp > 90 || cp < 65) { 
+			// characters outside the 26-letter 
+			// alphabet just get copied.
+			out = out.concat(inp[i].toUpperCase())
+			continue 
+		}
+
+		cp += offset
+		if (cp > 90) {
+			cp -= 26
+		}
+
+		let conv = String.fromCodePoint( cp );
+		out = out.concat(conv)
+		
+	}
+	return out
+}
+
+
+</script>
