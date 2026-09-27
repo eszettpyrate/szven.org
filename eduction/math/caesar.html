@@ -140,7 +140,7 @@ function draw() {
 
 		ctx.fillStyle = "black";
 		ctx.fillText(alphabet[i], 
-			cellsize*i + 2 + 32, 283 + cellsize*2 );
+			cellsize*i + 2 + 32, 285 + cellsize*2 );
 
 		// Red cards 
 		ctx.fillStyle = `rgb(
@@ -154,7 +154,7 @@ function draw() {
 		ctx.fillStyle = "black";
 		let letterIndex = (offset + i)%26;
 		ctx.fillText(alphabet[letterIndex], 
-			cellsize*i + 2 + 32, 321 + cellsize*2 );
+			cellsize*i + 2 + 32, 323 + cellsize*2 );
 
 	}
 
@@ -207,7 +207,7 @@ function draw() {
 
 		if (!current_letter_has_converted) {
 
-			let letter_row_y = 350
+			let letter_row_y = 352
 			let letter_index = alphabet.indexOf( output_text[letter_to_animate] )
 			let letterpos_x  = cellsize*letter_index + 2 + 32 // (same math as for placing the letter cards)
 
