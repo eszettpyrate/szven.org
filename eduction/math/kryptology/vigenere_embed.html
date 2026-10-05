@@ -1,7 +1,18 @@
 <!DOCTYPE html>
 <title>Vigenére</title>
+<style>
+html { 
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: black;
+}
+</style>
+
 <body>
-<canvas id="htmlCanvas" width="900" height="1100" style="border: 2px solid black;"></canvas>
+<canvas id="htmlCanvas" width="900" height="1100" style="border: 0px;"></canvas>
 </body>
 
 <script>
@@ -10,10 +21,12 @@ const ctx = canvas.getContext("2d");
 
 const alphabet  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-let text_input  = "HALLO, WELT!";
+let text_input  = "HALLO WELT";
 let text_key    = "GEHEIMNIS";
 let text_output = "";
 let key	        = ""; update_key();
+
+var selected = "text"
 
 const output_y  = 1030;
 
@@ -27,28 +40,36 @@ let animation_timer   = 0;
 let highlight_y = 0;
 let highlight_x = 0;
 
-
-// TODO doesn't reset properly (esp. when pausing animation and then manually stepping and stuff like that
-// TODO: the keyword looping should be made clearer (lightening the looped letters)
-
-
 function draw() {
 
 	ctx.font = "40px Courier New";
 	canvas.style.cursor = "auto"; 
 
 	// background
-	ctx.fillStyle = "lightblue";
+	ctx.fillStyle = "darkslategray";
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
-	ctx.fillStyle = "black";
-	ctx.fillRect(10, 10, canvas.width-20, canvas.height-20);
 
 	// Play/Pause button
 	if (button( (animating)? "⏹️" : "⏯️",
-		836, output_y + 45)) { animating = !animating; }
+		836, output_y + 45)) { 
+		animating = !animating; 
+		selected = "text"
+
+		if (text_output.length == text_input.length) {
+			animation_reset()
+			animating = true
+		}
+	}
 
 	// Single step of animation
-	if (button("▶️", 785, output_y + 45)) { animating = false; animation_step(); }	
+	if (button("▶️", 785, output_y + 45)) {
+
+		if (text_output.length == text_input.length) {
+			animation_reset()
+		}
+		animating = false; 
+		animation_step(); 
+	}	
 
 	// Continuous animation
 	if (animating) {
@@ -67,25 +88,23 @@ function draw() {
 	// MESSAGE text area
 	ctx.fillText("✉️", 20, 55);
 	ctx.fillStyle = "lightgreen";
-	if (label(55, text_input)) {
-		let ret = window.prompt("Text:", text_input)
-		if (ret != null) { 
-			text_input = postprocess_textinput(ret, 33);
-			animation_reset()
-			update_key()
-		}	
+	var text_input_display = text_input
+	const d = new Date();
+	if (!animating && selected == "text" && d.getSeconds() % 2 == 0) { 
+		text_input_display = text_input_display + "_" }
+	if (label(55, text_input_display)) {
+		selected = "text"
 	}
 
 	// KEY text area
 	ctx.fillText("🗝️", 20, 110);
 	ctx.fillStyle = "salmon";
-	if (label(110, key)) {
-		let ret = window.prompt("Key:", text_key)
-		if (ret != null) {
-			text_key = postprocess_textinput(ret, 33);
-			animation_reset()
-			update_key()
-		}	
+	var key_display = text_key
+	if (!animating && selected == "key" && d.getSeconds() % 2 == 0) { 
+		key_display = key_display + "_" }
+	if (animating) { key_display = key }
+	if (label(110, key_display)) {
+		selected = "key"
 	}
 
 	// message output
@@ -137,10 +156,9 @@ function animation_step() {
 		letter_to_animate++
 	}
 
-
 	while (letter_to_animate <= text_input.length && 
 		alphabet.indexOf(text_input[letter_to_animate]) == -1) {
-		text_output = [text_output, text_input[letter_to_animate]].join("");
+		text_output = text_output+ text_input[letter_to_animate]
 		letter_to_animate++
 	}
 
@@ -148,15 +166,10 @@ function animation_step() {
 			v_cypher(text_input[letter_to_animate], 
 			key[letter_to_animate])].join("");
 
-	if (letter_to_animate >= text_input.length) {
-		letter_to_animate = 0
-		animating = false;
-		highlight_y = 0;
-		highlight_x = 0;
-	} else {
-		highlight_y = alphabet.indexOf(text_input[letter_to_animate])
-		highlight_x = alphabet.indexOf(key[letter_to_animate])
-	}
+	highlight_y = alphabet.indexOf(text_input[letter_to_animate])
+	highlight_x = alphabet.indexOf(key[letter_to_animate])
+	
+	if (letter_to_animate >= text_input.length-1) { animating = false; }
 	
 }
 
@@ -172,7 +185,6 @@ function animation_reset() {
 // HTML mouse input
 canvas.addEventListener("click", function(evt) {
 	mouse.click = true;
-	addInput(mouse.x, mouse.y)
 }, false);
 
 canvas.addEventListener('mousemove', function(evt) {
@@ -181,26 +193,37 @@ canvas.addEventListener('mousemove', function(evt) {
 	mouse.y = evt.clientY - rect.top
 }, false);
 
-
-
-
-function postprocess_textinput(text, length) {
-// Clearning up text to work properly for our cyphers
-// (removing special characters and limiting its length
-
-	text = text.toUpperCase();
-
-	text = text.replaceAll("Ä", "AE")
-	text = text.replaceAll("Ü", "UE")
-	text = text.replaceAll("Ö", "OE")
-	text = text.replaceAll("ß", "SS")
-
-	text = text.substring(0, length);
-
-	if (text == "") { text = "A" } 
+// keyboard input
+window.addEventListener('keydown', function(evt) {
 	
-	return text;
-}
+	animation_reset()
+	animating = false
+
+	if (selected=="text") {
+
+		if (evt.keyCode == 32 || (evt.keyCode >= 65 && evt.keyCode <= 90)) {
+			text_input = text_input + String.fromCharCode(evt.keyCode) 
+		} else if (evt.keyCode == 8) {
+			text_input = text_input.substring(0, text_input.length -1 )
+		}
+		text_input  = text_input.substring(0, 33)
+
+	} else {
+
+		if ((evt.keyCode >= 65 && evt.keyCode <= 90)) {
+			text_key = text_key + String.fromCharCode(evt.keyCode) 
+		} else if (evt.keyCode == 8) {
+			text_key = text_key.substring(0, text_key.length -1 )
+		}
+		text_key = text_key.substring(0, 33)
+	}
+
+		update_key()
+
+
+}, false);
+
+
 
 function update_key() {
 // Given the user-entered "text_key", we create a valid key for the cypher.
