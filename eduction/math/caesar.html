@@ -12,7 +12,7 @@ html {
 </style>
 
 <body>
-<canvas id="htmlCanvas" width="900" height="790" style="border: 2px solid black;"></canvas>
+<canvas id="htmlCanvas" width="900" height="790" style="border: 0px;"></canvas>
 </body>
 
 <script>
@@ -22,7 +22,7 @@ const ctx = canvas.getContext("2d");
 const alphabet  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 let offset      = 16;
 
-let input_text  = "VENI, VIDI, VICI";
+let input_text  = "VENI VIDI VICI";
 let output_text = c_cypher(input_text, offset);
 let show_output = true;
 
@@ -46,36 +46,25 @@ function draw() {
 	canvas.style.cursor = "auto"; 
 
 	// background
-	ctx.fillStyle = "lightblue";
+	ctx.fillStyle = "darkslategray";
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
-	ctx.fillStyle = "black";
-	ctx.fillRect(10, 10, canvas.width-20, canvas.height-20);
 
 	// input area background
 	ctx.fillStyle = "lightgreen";
 	ctx.fillRect(pad, pad, canvas.width - pad*2, 250);
 
 
-	if (animating) {
-		// STOP ANIMATION button
-		if (button("🚫", canvas.width - 85, canvas.height - 30 )) {
-			animation_end()
-		}
-		// can only interact with the abort button while playing animation
-		mouse.click = false;
- 
-	} else {
+	// input text area 
+	var display_input_text = input_text
+	const d = new Date();
+	if (!animating && d.getSeconds() % 2 == 0) { 
+		display_input_text = display_input_text + "_"
+	}
+	textarea(pad, pad, canvas.width - pad*2, 250, display_input_text)
 
-		// input text area 
-		if (textarea(pad, pad, canvas.width - pad*2, 250, input_text)) {
-			let ret = window.prompt("Text:", input_text)
-			if (ret != null) {
-				input_text = postprocess_textinput(input_text, 198)
-				output_text = c_cypher(input_text, offset);
-			}
-		}
 
-		// "play animation" button
+	// "play animation" button
+	if (!animating) {
 		if (button("⏯️", canvas.width-70, canvas.height-35)) {
 			// animation startup
 			animating = true;
@@ -85,7 +74,6 @@ function draw() {
 			current_letter_has_converted = false;
 
 			for (i=0; i<input_text.length; i++) {
-
 				letter_pos_x.push(charpos_by_index(i)[0]);	
 				letter_pos_y.push(charpos_by_index(i)[1]);
 				letter_pos_goal_x.push(letter_pos_x[i])
@@ -93,37 +81,42 @@ function draw() {
 			}
 		}
 
-		// setting the cypher keys
-		// - increase
-		if (button("◀️", 340, 435)) { 
-			offset++;
-			if (offset > 25) { offset = 0; }
-			output_text = c_cypher(input_text, offset);
-		}
-		// - decrease
-		if (button("▶️", 460, 435)) {
-			offset--;
-			if (offset < 0) { offset = 25; } 
-			output_text = c_cypher(input_text, offset);
-		}
-		// - current number
-		let offset_text = (26-offset).toString()
-		if (offset_text == "26") { offset_text = "00" }
-		if (offset_text.length == 1) { offset_text = "0" + offset_text }
-		ctx.fillStyle = "aliceblue";
-		ctx.fillText(offset_text, 400, 432)
+	} else {
 
-		// switch key
-		if (button("🔀", canvas.width-125, canvas.height-35)) {
-			input_text = output_text
-			output_text = c_cypher(input_text, offset);
+		if (button("⏹️", canvas.width-70, canvas.height-35)) {
+			animation_end()
 		}
-	
-		// view output button
-		if (button((show_output)? "🙄" : "😑", 
-			20,  canvas.height-35)) { show_output = !show_output }	
+	}
 
-	} 
+
+	// setting the cypher keys
+	// - increase
+	if (button("◀️", 340, 435)) { 
+		offset++;
+		if (offset > 25) { offset = 0; }
+		output_text = c_cypher(input_text, offset);
+		animation_end()
+	}
+	// - decrease
+	if (button("▶️", 460, 435)) {
+		offset--;
+		if (offset < 0) { offset = 25; } 
+		output_text = c_cypher(input_text, offset);
+		animation_end()
+	}
+	// - current number
+	let offset_text = (26-offset).toString()
+	if (offset_text == "26") { offset_text = "00" }
+	if (offset_text.length == 1) { offset_text = "0" + offset_text }
+	ctx.fillStyle = "aliceblue";
+	ctx.fillText(offset_text, 400, 432)
+
+	// switch key
+	if (button("🔀", 20, canvas.height-35)) {
+		input_text = output_text
+		output_text = c_cypher(input_text, offset);
+		animation_end()
+	}
 
 	
 
@@ -131,10 +124,7 @@ function draw() {
 	for (let i=0; i<26; i++) {
 
 		// Green cards 
-		ctx.fillStyle = `rgb(
-				${ 20  + i * 7 }, 
-				${ 200 + i     }, 
-				${ 20  + i * 2 })`;
+		ctx.fillStyle = "lightgreen";
 		ctx.fillRect(i*cellsize+32, 320, 
 				cellsize-2, cellsize-1);
 
@@ -143,11 +133,8 @@ function draw() {
 			cellsize*i + 2 + 32, 285 + cellsize*2 );
 
 		// Red cards 
-		ctx.fillStyle = `rgb(
-				${ 220 }, 
-				${ 40 + (i+offset)%26 * 7 }, 
-				${ 40 + (i+offset)%26 * 2 })`;
-
+		ctx.fillStyle = "salmon";
+		if ((26-i)>offset && offset != 0) { ctx.fillStyle = "indianred" }
 		ctx.fillRect(i*cellsize+32, 320 + cellsize +5, 
 				cellsize-2, cellsize);
 	
@@ -300,11 +287,10 @@ function animation_end() {
 }
 
 
-// HTML mouse input
-canvas.addEventListener("click", handle_click);
-function handle_click() {
+// mouse input
+canvas.addEventListener("click", function(evt) {
 	mouse.click = true;
-}
+}, false);
 
 canvas.addEventListener('mousemove', function(evt) {
 	var rect = canvas.getBoundingClientRect();
@@ -312,7 +298,21 @@ canvas.addEventListener('mousemove', function(evt) {
 	mouse.y = evt.clientY - rect.top
 }, false);
 
+// keyboard input
+window.addEventListener('keydown', function(evt) {
+	
+	if (animating) { animation_end() }
 
+	if (evt.keyCode == 32 || (evt.keyCode >= 65 && evt.keyCode <= 90)) {
+		input_text = input_text + String.fromCharCode(evt.keyCode) 
+	} else if (evt.keyCode == 8) {
+		input_text = input_text.substring(0, input_text.length -1 )
+	}
+
+	input_text  = input_text.substring(0, 198)
+	output_text = c_cypher(input_text, offset)
+
+}, false);
 
 
 function charpos_by_index(i) {
@@ -327,19 +327,10 @@ function textarea(x, y, w, h, text) {
 
 	ctx.fillStyle = "black";
 
-	for (i=0; i<input_text.length; i++) {
-		ctx.fillText(input_text[i], charpos_by_index(i)[0], charpos_by_index(i)[1])
+	for (i=0; i<text.length; i++) {
+		ctx.fillText(text[i], charpos_by_index(i)[0], charpos_by_index(i)[1])
 	}
 
-	// return whether the cursor is on this area	
-	if (mouse.x > x && 
-		mouse.x < x+w &&
-		mouse.y > y &&
-		mouse.y < y+h) { 
-			canvas.style.cursor = "pointer"; 
-			return mouse.click;
-			}
-	return false
 }
 
 function button(icon, x, y) {
@@ -356,26 +347,6 @@ function button(icon, x, y) {
 	} 
 	return false
 }
-
-
-function postprocess_textinput(text, length) {
-// Clearning up text to work properly for our cyphers
-// (removing special characters and limiting its length
-
-	text = text.toUpperCase();
-
-	text = text.replaceAll("Ä", "AE")
-	text = text.replaceAll("Ü", "UE")
-	text = text.replaceAll("Ö", "OE")
-	text = text.replaceAll("ß", "SS")
-
-	text = text.substring(0, length);
-
-	if (text == "") { text = "A" } 
-	
-	return text;
-}
-
 
 
 function c_cypher(inp, offset) {
